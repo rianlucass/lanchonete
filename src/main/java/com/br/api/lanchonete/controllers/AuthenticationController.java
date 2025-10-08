@@ -1,8 +1,10 @@
 package com.br.api.lanchonete.controllers;
 
 import com.br.api.lanchonete.domain.user.AuthenticationDTO;
+import com.br.api.lanchonete.domain.user.LoginResponseDTO;
 import com.br.api.lanchonete.domain.user.RegisterDTO;
 import com.br.api.lanchonete.domain.user.User;
+import com.br.api.lanchonete.infra.security.TokenService;
 import com.br.api.lanchonete.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -25,12 +27,16 @@ public class AuthenticationController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private TokenService tokenService;
+
     @PostMapping("login")
     public ResponseEntity login(@RequestBody @Validated AuthenticationDTO login) {
         var UsernamePassword = new UsernamePasswordAuthenticationToken(login.username(), login.password());
         var auth = this.authenticationManager.authenticate(UsernamePassword);
+        var token = tokenService.generateToken((User) auth.getPrincipal());
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 
     @PostMapping("register")
