@@ -12,13 +12,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping
+@RequestMapping("/")
 public class AuthenticationController {
 
     @Autowired
@@ -44,13 +41,18 @@ public class AuthenticationController {
         if(this.userRepository.findByUsername(register.username()) != null)
             return ResponseEntity.badRequest().build();
 
-        System.out.println(register.password() + "," + register.name() + "," + register.email());
+        //System.out.println(register.password() + "," + register.name() + "," + register.email());
 
         String encryptedPassword = new BCryptPasswordEncoder().encode(register.password());
         User newUser = new User(register.username(), register.email(), register.name(), encryptedPassword, register.role());
 
         this.userRepository.save(newUser);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping
+    public ResponseEntity teste(){
+        return ResponseEntity.ok("Teste");
     }
 
 }
