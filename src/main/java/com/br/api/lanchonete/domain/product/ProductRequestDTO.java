@@ -18,6 +18,8 @@ public record ProductRequestDTO (
         @NotBlank(message = "Categoria é obrigatória")
         String category,
 
+        Integer stock,
+
         @Size(max = 500, message = "descrição longa")
         String description,
 
