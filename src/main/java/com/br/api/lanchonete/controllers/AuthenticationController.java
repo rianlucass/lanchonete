@@ -15,7 +15,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping
 public class AuthenticationController {
 
     @Autowired
@@ -41,18 +41,14 @@ public class AuthenticationController {
         if(this.userRepository.findByUsername(register.username()) != null)
             return ResponseEntity.badRequest().build();
 
-        //System.out.println(register.password() + "," + register.name() + "," + register.email());
+        if(this.userRepository.findByEmail(register.email()) != null)
+            return ResponseEntity.badRequest().build();
 
         String encryptedPassword = new BCryptPasswordEncoder().encode(register.password());
         User newUser = new User(register.username(), register.email(), register.name(), encryptedPassword, register.role());
 
         this.userRepository.save(newUser);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping
-    public ResponseEntity teste(){
-        return ResponseEntity.ok("Teste");
     }
 
 }
