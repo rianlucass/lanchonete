@@ -14,6 +14,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping
 public class AuthenticationController {
@@ -39,16 +41,21 @@ public class AuthenticationController {
     @PostMapping("register")
     public ResponseEntity responseEntity(@RequestBody @Validated RegisterDTO register) {
         if(this.userRepository.findByUsername(register.username()) != null)
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body((Map.of("message", "Username já cadastrado.")));
 
         if(this.userRepository.findByEmail(register.email()) != null)
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body((Map.of("message", "Email já cadastrado.")));
 
         String encryptedPassword = new BCryptPasswordEncoder().encode(register.password());
-        User newUser = new User(register.username(), register.email(), register.name(), encryptedPassword, register.role());
+        User newUser = new User(
+                register.username(),
+                register.email(),
+                register.name(),
+                encryptedPassword, register.role()
+        );
 
         this.userRepository.save(newUser);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("message", "Usuário cadastrado com sucesso!"));
     }
 
 }

@@ -16,11 +16,12 @@ public record RegisterDTO (
         String email,
 
         @NotBlank
-        @Size(min = 3, max = 50, message = "Username deve ter mais 3 caracteres e menos de 50")
+        @Size(min = 10, max = 100, message = "Nome deve ter mais 15 caracteres e menos de 100")
         String name,
 
         @NotBlank
         @Size(min = 8, max = 20, message = "Senha deve possuir mais de 8 e no maximo 20 caracteres")
         String password,
+
         UserRole role
 ){ }
