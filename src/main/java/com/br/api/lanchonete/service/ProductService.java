@@ -7,8 +7,10 @@ import com.br.api.lanchonete.domain.product.ProductResponseDTO;
 import com.br.api.lanchonete.repositories.ProductRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,10 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,7 +67,7 @@ public class ProductService {
             product.setName(dto.name());
             product.setPrice(dto.price());
 
-            if(dto.category().equals("BEBIDAS")) {
+            if(dto.stock() != null || dto.category().equals("BEBIDAS")) {
                 if(dto.stock() <= 0) {
                     throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
                 }
@@ -101,19 +100,23 @@ public class ProductService {
                 .orElse(".bin");
     }
 
-    public List<ProductResponseDTO> getListByCategory(Category category) {
-        return productRepository.findByCategory(category).stream().map(product -> {
-            ProductResponseDTO responseDTO = new ProductResponseDTO(
-                    product.getName(),
-                    product.getPrice(),
-                    product.getCategory(),
-                    product.getDescription(),
-                    product.getImageURL(),
-                    product.getStock()
-            );
-
-            return responseDTO;
-        }).collect(Collectors.toList());
+    public List<ProductResponseDTO> getListByCategory(String category) {
+        try {
+            Category categoryEnum = Category.valueOf(category.toUpperCase());
+            return productRepository.findByCategory(categoryEnum).stream().map(product -> {
+                ProductResponseDTO responseDTO = new ProductResponseDTO(
+                        product.getName(),
+                        product.getPrice(),
+                        product.getCategory(),
+                        product.getDescription(),
+                        product.getImageURL(),
+                        product.getStock()
+                );
+                return responseDTO;
+            }).collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoria inválida -> " + category);
+        }
     }
 
     @Transactional
@@ -172,9 +175,9 @@ public class ProductService {
                 existingProduct.setPrice(dto.price());
             }
 
-            if (dto.category() != null && !dto.category().trim().isEmpty()) {
+            if (dto.category() != null && !Objects.isNull(dto.category())) {
                 try {
-                    Category.valueOf(dto.category());
+                    Category.valueOf(String.valueOf(dto.category()));
                     existingProduct.setCategory(dto.category());
 
                     if (dto.category().equals("BEBIDAS")) {
@@ -197,11 +200,10 @@ public class ProductService {
             }
 
             if (dto.stock() != null && dto.stock() >= 0) {
-                if (existingProduct.getCategory().equals("BEBIDAS") ||
-                        (dto.category() != null && dto.category().equals("BEBIDAS"))) {
-                    if (dto.stock() <= 0) {
-                        throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
-                    }
+                if (existingProduct.getCategory().equals("BEBIDAS") || (dto.category() != null && dto.category().equals("BEBIDAS"))) {
+                            if (dto.stock() <= 0) {
+                                throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
+                            }
                 }
                 existingProduct.setStock(dto.stock());
             }
@@ -221,5 +223,7 @@ public class ProductService {
             throw new RuntimeException("Erro ao processar imagem: " + e.getMessage(), e);
         }
     }
+
+
 
 }

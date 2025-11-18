@@ -18,7 +18,9 @@ public class Product {
 
     private String name;
     private BigDecimal price;
-    private String category;
+
+    @Enumerated(EnumType.STRING)
+    private Category category;
     private Integer stock;
     private String description;
     private String imageURL;

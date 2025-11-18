@@ -16,7 +16,7 @@ public record ProductRequestDTO (
         BigDecimal price,
 
         @NotBlank(message = "Categoria é obrigatória")
-        String category,
+        Category category,
 
         Integer stock,
 

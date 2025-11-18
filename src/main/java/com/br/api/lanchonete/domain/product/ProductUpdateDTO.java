@@ -7,7 +7,7 @@ import java.util.Optional;
 public record ProductUpdateDTO(
         Optional<String> name,
         Optional<Double> price,
-        Optional<String> category,
+        Optional<Category> category,
         Optional<String> description,
         Optional<Integer> stock,
         MultipartFile image

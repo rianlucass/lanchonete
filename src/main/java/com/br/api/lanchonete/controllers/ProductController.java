@@ -25,7 +25,7 @@ public class ProductController {
     public ResponseEntity createProduct(
             @RequestParam String name,
             @RequestParam BigDecimal price,
-            @RequestParam String category,
+            @RequestParam Category category,
             @RequestParam int stock,
             @RequestParam(required = false) String description,
             @RequestParam MultipartFile image) {
@@ -46,7 +46,7 @@ public class ProductController {
     }
 
     @GetMapping("/category/{category}")
-    public List<ProductResponseDTO> getProductsByCategory(@PathVariable Category category) {
+    public List<ProductResponseDTO> getProductsByCategory(@PathVariable String category) {
         return productService.getListByCategory(category);
     }
 
