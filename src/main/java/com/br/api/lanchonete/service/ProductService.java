@@ -74,6 +74,7 @@ public class ProductService {
                 product.setStock(dto.stock());
             }
             product.setCategory(dto.category());
+            product.setActive(true);
             product.setDescription(dto.description());
             product.setImageURL(safeFilename);
 
@@ -84,6 +85,7 @@ public class ProductService {
                     savedProduct.getPrice(),
                     savedProduct.getCategory(),
                     savedProduct.getDescription(),
+                    savedProduct.getActive(),
                     savedProduct.getImageURL(),
                     savedProduct.getStock()
             );
@@ -103,12 +105,13 @@ public class ProductService {
     public List<ProductResponseDTO> getListByCategory(String category) {
         try {
             Category categoryEnum = Category.valueOf(category.toUpperCase());
-            return productRepository.findByCategory(categoryEnum).stream().map(product -> {
+            return productRepository.findByCategoryAndActiveTrue(categoryEnum).stream().map(product -> {
                 ProductResponseDTO responseDTO = new ProductResponseDTO(
                         product.getName(),
                         product.getPrice(),
                         product.getCategory(),
                         product.getDescription(),
+                        product.getActive(),
                         product.getImageURL(),
                         product.getStock()
                 );
@@ -215,6 +218,7 @@ public class ProductService {
                     updatedProduct.getPrice(),
                     updatedProduct.getCategory(),
                     updatedProduct.getDescription(),
+                    updatedProduct.getActive(),
                     updatedProduct.getImageURL(),
                     updatedProduct.getStock()
             );
@@ -224,6 +228,14 @@ public class ProductService {
         }
     }
 
+    public String softDelete(String id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        product.setActive(false);
+        productRepository.save(product);
+
+        return "Produto: " + product.getName() + ", ID: " + product.getId() + "Desativado";
+    }
 
 
 }

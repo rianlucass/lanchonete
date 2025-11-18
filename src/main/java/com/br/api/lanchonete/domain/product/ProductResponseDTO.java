@@ -7,6 +7,7 @@ public record ProductResponseDTO(
         BigDecimal price,
         Category category,
         String description,
+        Boolean active,
         String imageURL,
         Integer stock
 ) {

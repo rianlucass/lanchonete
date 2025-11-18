@@ -21,6 +21,8 @@ public class Product {
 
     @Enumerated(EnumType.STRING)
     private Category category;
+
+    private Boolean active;
     private Integer stock;
     private String description;
     private String imageURL;
