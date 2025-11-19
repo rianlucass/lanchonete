@@ -26,7 +26,7 @@ public class ProductController {
             @RequestParam String name,
             @RequestParam BigDecimal price,
             @RequestParam Category category,
-            @RequestParam int stock,
+            @RequestParam(required = false) Integer stock,
             @RequestParam(required = false) String description,
             @RequestParam MultipartFile image) {
 

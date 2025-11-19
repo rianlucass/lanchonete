@@ -67,7 +67,7 @@ public class ProductService {
             product.setName(dto.name());
             product.setPrice(dto.price());
 
-            if(dto.stock() != null || dto.category().equals("BEBIDAS")) {
+            if(dto.stock() != null || dto.category().equals(Category.BEBIDAS)) {
                 if(dto.stock() <= 0) {
                     throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
                 }
