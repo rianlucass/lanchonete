@@ -106,7 +106,36 @@ public class ProductService {
         }
     }
 
+    public List<ProductResponseDTO> getListByCategory(String category) {
+        try {
+            Category categoryEnum = Category.valueOf(category.toUpperCase());
+            return productRepository.findByCategoryAndActiveTrue(categoryEnum).stream().map(product -> {
+                ProductResponseDTO responseDTO = new ProductResponseDTO(
+                        product.getId(),
+                        product.getName(),
+                        product.getPrice(),
+                        product.getCategory(),
+                        product.getDescription(),
+                        product.getActive(),
+                        product.getImageURL(),
+                        product.getStock()
+                );
+                return responseDTO;
+            }).collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoria inválida -> " + category);
+        }
+    }
 
+
+    public String softDelete(String id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        product.setActive(false);
+        productRepository.save(product);
+
+        return "Produto: " + product.getName() + ", ID: " + product.getId() + "Desativado";
+    }
 
 
     private void validateImage(MultipartFile file) {
@@ -178,6 +207,7 @@ public class ProductService {
 
     private ProductResponseDTO mapToResponse(Product p) {
         return new ProductResponseDTO(
+                p.getId(),
                 p.getName(),
                 p.getPrice(),
                 p.getCategory(),
@@ -186,37 +216,6 @@ public class ProductService {
                 p.getImageURL(),
                 p.getStock()
         );
-    }
-
-
-    public List<ProductResponseDTO> getListByCategory(String category) {
-        try {
-            Category categoryEnum = Category.valueOf(category.toUpperCase());
-            return productRepository.findByCategoryAndActiveTrue(categoryEnum).stream().map(product -> {
-                ProductResponseDTO responseDTO = new ProductResponseDTO(
-                        product.getName(),
-                        product.getPrice(),
-                        product.getCategory(),
-                        product.getDescription(),
-                        product.getActive(),
-                        product.getImageURL(),
-                        product.getStock()
-                );
-                return responseDTO;
-            }).collect(Collectors.toList());
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoria inválida -> " + category);
-        }
-    }
-
-
-    public String softDelete(String id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
-        product.setActive(false);
-        productRepository.save(product);
-
-        return "Produto: " + product.getName() + ", ID: " + product.getId() + "Desativado";
     }
 
 
