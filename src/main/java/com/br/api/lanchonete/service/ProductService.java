@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
@@ -32,66 +33,139 @@ public class ProductService {
 
     @Transactional
     public ProductResponseDTO saveProduct(ProductRequestDTO dto) {
-        if (dto.image().isEmpty()) {
-            throw new IllegalArgumentException("Imagem é obrigatória");
-        }
-
-        String contentType = dto.image().getContentType();
-        if (!Arrays.asList("image/jpeg", "image/png", "image/gif").contains(contentType)) {
-            throw new IllegalArgumentException("Apenas imagens JPEG, PNG e GIF são permitidas");
-        }
-
-        if (dto.image().getSize() > 5 * 1024 * 1024) {
-            throw new IllegalArgumentException("Tamanho máximo do arquivo é 5MB");
-        }
+        validateImage(dto.image());
+        validateStockForBebidas(dto.category(), dto.stock());
 
         try {
-            Path uploadPath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
-            Files.createDirectories(uploadPath);
-
-            String originalFilename = StringUtils.cleanPath(dto.image().getOriginalFilename());
-            String fileExtension = getFileExtension(originalFilename);
-            String safeFilename = System.currentTimeMillis() + "_" + UUID.randomUUID() + fileExtension;
-
-            Path targetPath = uploadPath.resolve(safeFilename).normalize();
-
-            if (!targetPath.startsWith(uploadPath)) {
-                throw new SecurityException("Tentativa de path traversal detectada");
-            }
-
-            try (InputStream inputStream = dto.image().getInputStream()) {
-                Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
-            }
+            String filename = saveImage(dto.image());
 
             Product product = new Product();
             product.setName(dto.name());
             product.setPrice(dto.price());
+            product.setCategory(dto.category());
+            product.setDescription(dto.description());
+            product.setActive(true);
+            product.setImageURL(filename);
 
-            if(dto.stock() != null || dto.category().equals(Category.BEBIDAS)) {
-                if(dto.stock() <= 0) {
-                    throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
-                }
+            if (dto.category() == Category.BEBIDAS) {
                 product.setStock(dto.stock());
             }
-            product.setCategory(dto.category());
-            product.setActive(true);
-            product.setDescription(dto.description());
-            product.setImageURL(safeFilename);
 
-            Product savedProduct = productRepository.save(product);
+            Product saved = productRepository.save(product);
 
-            return new ProductResponseDTO(
-                    savedProduct.getName(),
-                    savedProduct.getPrice(),
-                    savedProduct.getCategory(),
-                    savedProduct.getDescription(),
-                    savedProduct.getActive(),
-                    savedProduct.getImageURL(),
-                    savedProduct.getStock()
-            );
+            return mapToResponse(saved);
 
         } catch (IOException e) {
             throw new RuntimeException("Erro ao salvar imagem: " + e.getMessage(), e);
+        }
+    }
+
+    @Transactional
+    public ProductResponseDTO updateProduct(String id, ProductRequestDTO dto) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        try {
+            if (dto.image() != null && !dto.image().isEmpty()) {
+                validateImage(dto.image());
+                deleteImage(product.getImageURL());
+                String newFilename = saveImage(dto.image());
+                product.setImageURL(newFilename);
+            }
+
+            if (dto.name() != null && !dto.name().isBlank()) {
+                product.setName(dto.name());
+            }
+
+            if (dto.price() != null && dto.price().compareTo(BigDecimal.ZERO) > 0) {
+                product.setPrice(dto.price());
+            }
+
+            if (dto.category() != null) {
+                validateStockForBebidas(dto.category(), dto.stock());
+                product.setCategory(dto.category());
+            }
+
+            if (dto.description() != null) {
+                product.setDescription(dto.description());
+            }
+
+            if (dto.stock() != null) {
+                validateStockForBebidas(
+                        dto.category() != null ? dto.category() : product.getCategory(),
+                        dto.stock()
+                );
+                product.setStock(dto.stock());
+            }
+
+            Product updated = productRepository.save(product);
+            return mapToResponse(updated);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao processar imagem: " + e.getMessage(), e);
+        }
+    }
+
+
+
+
+    private void validateImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Imagem é obrigatória");
+        }
+
+        String contentType = file.getContentType();
+        List<String> allowedTypes = Arrays.asList("image/jpeg", "image/png", "image/gif");
+
+        if (!allowedTypes.contains(contentType)) {
+            throw new IllegalArgumentException("Apenas imagens JPEG, PNG e GIF são permitidas");
+        }
+
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException("Tamanho máximo do arquivo é 5MB");
+        }
+    }
+
+    private String saveImage(MultipartFile file) throws IOException {
+        Path uploadPath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+        Files.createDirectories(uploadPath);
+
+        String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
+        String extension = getFileExtension(originalFilename);
+
+        String safeFilename = System.currentTimeMillis() + "_" + UUID.randomUUID() + extension;
+
+        Path targetPath = uploadPath.resolve(safeFilename).normalize();
+
+        if (!targetPath.startsWith(uploadPath)) {
+            throw new SecurityException("Tentativa de path traversal detectada");
+        }
+
+        try (InputStream in = file.getInputStream()) {
+            Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        return safeFilename;
+    }
+
+    private void deleteImage(String filename) {
+        if (filename == null) return;
+
+        try {
+            Path path = Paths.get(UPLOAD_DIR).resolve(filename).normalize();
+            if (Files.exists(path)) {
+                Files.delete(path);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao deletar imagem antiga: " + e.getMessage());
+        }
+    }
+
+    private void validateStockForBebidas(Category category, Integer stock) {
+        if (category == Category.BEBIDAS) {
+            if (stock == null || stock <= 0) {
+                throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
+            }
         }
     }
 
@@ -101,6 +175,19 @@ public class ProductService {
                 .map(f -> f.substring(f.lastIndexOf(".")))
                 .orElse(".bin");
     }
+
+    private ProductResponseDTO mapToResponse(Product p) {
+        return new ProductResponseDTO(
+                p.getName(),
+                p.getPrice(),
+                p.getCategory(),
+                p.getDescription(),
+                p.getActive(),
+                p.getImageURL(),
+                p.getStock()
+        );
+    }
+
 
     public List<ProductResponseDTO> getListByCategory(String category) {
         try {
@@ -122,111 +209,6 @@ public class ProductService {
         }
     }
 
-    @Transactional
-    public ProductResponseDTO updateProduct(String id, ProductRequestDTO dto) {
-        Product existingProduct = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Produto não encontrado com ID: " + id));
-
-        try {
-            String imageFilename = existingProduct.getImageURL();
-
-            if (dto.image() != null && !dto.image().isEmpty()) {
-                String contentType = dto.image().getContentType();
-                if (!Arrays.asList("image/jpeg", "image/png", "image/gif").contains(contentType)) {
-                    throw new IllegalArgumentException("Apenas imagens JPEG, PNG e GIF são permitidas");
-                }
-
-                if (dto.image().getSize() > 5 * 1024 * 1024) {
-                    throw new IllegalArgumentException("Tamanho máximo do arquivo é 5MB");
-                }
-
-                Path uploadPath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
-                Files.createDirectories(uploadPath);
-
-                String originalFilename = StringUtils.cleanPath(dto.image().getOriginalFilename());
-                String fileExtension = getFileExtension(originalFilename);
-                String safeFilename = System.currentTimeMillis() + "_" + UUID.randomUUID() + fileExtension;
-
-                Path targetPath = uploadPath.resolve(safeFilename).normalize();
-
-                if (!targetPath.startsWith(uploadPath)) {
-                    throw new SecurityException("Tentativa de path traversal detectada");
-                }
-
-                try (InputStream inputStream = dto.image().getInputStream()) {
-                    Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                }
-
-                try {
-                    Path oldImagePath = uploadPath.resolve(existingProduct.getImageURL()).normalize();
-                    if (Files.exists(oldImagePath) && oldImagePath.startsWith(uploadPath)) {
-                        Files.delete(oldImagePath);
-                    }
-                } catch (IOException e) {
-                    System.err.println("Erro ao deletar imagem antiga: " + e.getMessage());
-                }
-
-                imageFilename = safeFilename;
-                existingProduct.setImageURL(imageFilename);
-            }
-
-            if (dto.name() != null && !dto.name().trim().isEmpty()) {
-                existingProduct.setName(dto.name());
-            }
-
-            if (dto.price() != null && dto.price().compareTo(BigDecimal.ZERO) > 0) {
-                existingProduct.setPrice(dto.price());
-            }
-
-            if (dto.category() != null && !Objects.isNull(dto.category())) {
-                try {
-                    Category.valueOf(String.valueOf(dto.category()));
-                    existingProduct.setCategory(dto.category());
-
-                    if (dto.category().equals("BEBIDAS")) {
-                        if (dto.stock() != null && dto.stock() <= 0) {
-                            throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
-                        }
-                        if (dto.stock() != null) {
-                            existingProduct.setStock(dto.stock());
-                        } else if (existingProduct.getStock() == null || existingProduct.getStock() <= 0) {
-                            throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Categoria inválida: " + dto.category());
-                }
-            }
-
-            if (dto.description() != null) {
-                existingProduct.setDescription(dto.description());
-            }
-
-            if (dto.stock() != null && dto.stock() >= 0) {
-                if (existingProduct.getCategory().equals("BEBIDAS") || (dto.category() != null && dto.category().equals("BEBIDAS"))) {
-                            if (dto.stock() <= 0) {
-                                throw new IllegalArgumentException("Quantidade em estoque é obrigatória para BEBIDAS");
-                            }
-                }
-                existingProduct.setStock(dto.stock());
-            }
-
-            Product updatedProduct = productRepository.save(existingProduct);
-
-            return new ProductResponseDTO(
-                    updatedProduct.getName(),
-                    updatedProduct.getPrice(),
-                    updatedProduct.getCategory(),
-                    updatedProduct.getDescription(),
-                    updatedProduct.getActive(),
-                    updatedProduct.getImageURL(),
-                    updatedProduct.getStock()
-            );
-
-        } catch (IOException e) {
-            throw new RuntimeException("Erro ao processar imagem: " + e.getMessage(), e);
-        }
-    }
 
     public String softDelete(String id) {
         Product product = productRepository.findById(id)
