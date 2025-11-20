@@ -20,6 +20,7 @@ public class Order {
     private String id;
 
     private LocalDateTime dateTime;
+    private String clientName;
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)

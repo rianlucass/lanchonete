@@ -7,8 +7,6 @@ import com.br.api.lanchonete.exceptions.InsufficientStockException;
 import com.br.api.lanchonete.exceptions.ProductNotFoundException;
 import com.br.api.lanchonete.repositories.OrderRepository;
 import com.br.api.lanchonete.repositories.ProductRepository;
-import com.fasterxml.jackson.core.io.BigDecimalParser;
-import com.fasterxml.jackson.core.io.BigIntegerParser;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,9 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Formatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -34,8 +30,9 @@ public class OrderService {
     public OrderResponseDTO createOrder(OrderRequestDTO orderRequestDTO) {
         Order order = new Order();
         order.setDateTime(LocalDateTime.now());
+        order.setClientName(orderRequestDTO.clientName());
         order.setPaymentMethod(orderRequestDTO.paymentMethod());
-        order.setStatus(OrderStatus.PENDING);
+        order.setStatus(OrderStatus.COMPLETED);
 
         List<OrderItem> items = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -43,12 +40,11 @@ public class OrderService {
         for(OrderItemRequestDTO itemDTO : orderRequestDTO.items()){
             Product product = productRepository.findById(itemDTO.productId()).orElseThrow(()-> new ProductNotFoundException(itemDTO.productId()));
 
-            if (product.getCategory() == Category.BEBIDAS){
-                if (product.getStock() < itemDTO.quantity()){
-                    throw new InsufficientStockException(product.getName());
-                }
-                product.setStock(product.getStock() - itemDTO.quantity());
+            if (product.getStock() < itemDTO.quantity()){
+                throw new InsufficientStockException(product.getName());
             }
+            product.setStock(product.getStock() - itemDTO.quantity());
+
 
             OrderItem item = new OrderItem();
             item.setOrder(order);
@@ -83,6 +79,7 @@ public class OrderService {
         return new OrderResponseDTO(
                 order.getId(),
                 order.getDateTime(),
+                order.getClientName(),
                 order.getTotalAmount(),
                 order.getPaymentMethod(),
                 order.getStatus(),

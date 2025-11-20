@@ -46,10 +46,8 @@ public class ProductService {
             product.setDescription(dto.description());
             product.setActive(true);
             product.setImageURL(filename);
+            product.setStock(dto.stock());
 
-            if (dto.category() == Category.BEBIDAS) {
-                product.setStock(dto.stock());
-            }
 
             Product saved = productRepository.save(product);
 
