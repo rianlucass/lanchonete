@@ -31,6 +31,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/register").permitAll()
                         .requestMatchers(HttpMethod.GET, "/").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/uploads/**").permitAll()
                         //.requestMatchers(HttpMethod.GET, "/").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
