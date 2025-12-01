@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record OrderResponseDTO(
-        String id,
+        Long id,
         LocalDateTime dateTime,
         String clientName,
         BigDecimal totalAmount,

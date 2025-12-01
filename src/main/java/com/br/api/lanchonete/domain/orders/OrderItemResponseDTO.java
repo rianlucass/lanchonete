@@ -3,7 +3,7 @@ package com.br.api.lanchonete.domain.orders;
 import java.math.BigDecimal;
 
 public record OrderItemResponseDTO(
-        String id,
+        Long id,
         String productId,
         String productName,
         int quantity,

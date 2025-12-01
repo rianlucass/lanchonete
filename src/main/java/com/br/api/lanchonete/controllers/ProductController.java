@@ -44,6 +44,10 @@ public class ProductController {
             );
         }
     }
+    @GetMapping
+    public List<ProductResponseDTO> getAllProducts() {
+        return productService.findAllProducts();
+    }
 
     @GetMapping("/category/{category}")
     public List<ProductResponseDTO> getProductsByCategory(@PathVariable String category) {
