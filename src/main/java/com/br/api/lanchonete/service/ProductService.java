@@ -125,6 +125,24 @@ public class ProductService {
         }
     }
 
+    public List<ProductResponseDTO> findAllProducts() {
+        return productRepository.findAll().stream()
+                .filter(product -> product.getActive()) // ← Filtra apenas ativos
+                .map(product -> {
+                    ProductResponseDTO productResponseDTO = new ProductResponseDTO(
+                            product.getId(),
+                            product.getName(),
+                            product.getPrice(),
+                            product.getCategory(),
+                            product.getDescription(),
+                            product.getActive(),
+                            product.getImageURL(),
+                            product.getStock()
+                    );
+                    return productResponseDTO;
+                }).toList();
+    }
+
 
     public String softDelete(String id) {
         Product product = productRepository.findById(id)
@@ -215,6 +233,4 @@ public class ProductService {
                 p.getStock()
         );
     }
-
-
 }

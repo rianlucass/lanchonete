@@ -13,8 +13,8 @@ import java.math.BigDecimal;
 @Setter
 public class OrderItem {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
 
     @ManyToOne
     @JoinColumn(name = "product_id")
