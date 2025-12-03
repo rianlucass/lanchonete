@@ -19,6 +19,7 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
+    private String orderNumber;
     private LocalDateTime dateTime;
     private String clientName;
     private BigDecimal totalAmount;

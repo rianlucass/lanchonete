@@ -1,7 +1,6 @@
-package com.br.api.lanchonete.service;
+package com.br.api.lanchonete.services;
 
 import com.br.api.lanchonete.domain.orders.*;
-import com.br.api.lanchonete.domain.product.Category;
 import com.br.api.lanchonete.domain.product.Product;
 import com.br.api.lanchonete.exceptions.InsufficientStockException;
 import com.br.api.lanchonete.exceptions.ProductNotFoundException;
@@ -33,6 +32,7 @@ public class OrderService {
         order.setClientName(orderRequestDTO.clientName());
         order.setPaymentMethod(orderRequestDTO.paymentMethod());
         order.setStatus(OrderStatus.COMPLETED);
+        order.setOrderNumber(generateOrderNumber());
 
         List<OrderItem> items = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -78,6 +78,7 @@ public class OrderService {
 
         return new OrderResponseDTO(
                 order.getId(),
+                order.getOrderNumber(),
                 order.getDateTime(),
                 order.getClientName(),
                 order.getTotalAmount(),
@@ -87,19 +88,58 @@ public class OrderService {
         );
     }
 
-    public List<OrderResponseDTO> getHistory(LocalDate startDate, LocalDate endDate) {
+    public List<OrderResponseDTO> getHistory(LocalDate startDate, LocalDate endDate, OrderStatus status) {
+
         List<Order> orders;
 
-        if (startDate != null && endDate != null) {
+        if (startDate != null && endDate != null && status != null) {
+            orders = orderRepository.findByStatusAndDateTimeBetween(
+                    status,
+                    startDate.atStartOfDay(),
+                    endDate.atTime(23, 59)
+            );
+        }
+        else if (startDate != null && endDate != null) {
             orders = orderRepository.findByDateTimeBetween(
                     startDate.atStartOfDay(),
                     endDate.atTime(23, 59)
             );
-        } else {
+        }
+        else if (status != null) {
+            orders = orderRepository.findByStatus(status);
+        }
+        else {
             orders = orderRepository.findAll();
         }
 
         return orders.stream().map(this::mapToResponse).toList();
     }
+
+    @Transactional
+    public OrderResponseDTO cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Pedido não encontrado: " + orderId));
+
+        if (order.getStatus() == OrderStatus.CANCELED) {
+            throw new RuntimeException("Esse pedido já foi cancelado.");
+        }
+
+        // Reverter estoque
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            product.setStock(product.getStock() + item.getQuantity());
+        }
+
+        order.setStatus(OrderStatus.CANCELED);
+        orderRepository.save(order);
+
+        return mapToResponse(order);
+    }
+
+    private String generateOrderNumber() {
+        long count = orderRepository.count() + 1;
+        return String.format("PED-%06d", count);
+    }
+
 
 }
