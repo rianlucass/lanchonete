@@ -3,7 +3,7 @@ package com.br.api.lanchonete.controllers;
 import com.br.api.lanchonete.domain.product.Category;
 import com.br.api.lanchonete.domain.product.ProductRequestDTO;
 import com.br.api.lanchonete.domain.product.ProductResponseDTO;
-import com.br.api.lanchonete.service.ProductService;
+import com.br.api.lanchonete.services.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

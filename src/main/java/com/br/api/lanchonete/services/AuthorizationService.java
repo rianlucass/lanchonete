@@ -1,4 +1,4 @@
-package com.br.api.lanchonete.service;
+package com.br.api.lanchonete.services;
 
 import com.br.api.lanchonete.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;

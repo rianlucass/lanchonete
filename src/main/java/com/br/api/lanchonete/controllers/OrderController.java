@@ -2,7 +2,8 @@ package com.br.api.lanchonete.controllers;
 
 import com.br.api.lanchonete.domain.orders.OrderRequestDTO;
 import com.br.api.lanchonete.domain.orders.OrderResponseDTO;
-import com.br.api.lanchonete.service.OrderService;
+import com.br.api.lanchonete.domain.orders.OrderStatus;
+import com.br.api.lanchonete.services.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -25,14 +26,17 @@ public class OrderController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<List<OrderResponseDTO>> getHistory(
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate startDate,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    public List<OrderResponseDTO> history(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+            @RequestParam(required = false) OrderStatus status
     ) {
-        List<OrderResponseDTO> history = orderService.getHistory(startDate, endDate);
-        return ResponseEntity.ok(history);
+        return orderService.getHistory(startDate, endDate, status);
+    }
+
+    @PutMapping("/{id}/cancel")
+    public OrderResponseDTO cancel(@PathVariable Long id) {
+        return orderService.cancelOrder(id);
     }
 
 }

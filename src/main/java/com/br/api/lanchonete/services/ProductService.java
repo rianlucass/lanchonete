@@ -1,4 +1,4 @@
-package com.br.api.lanchonete.service;
+package com.br.api.lanchonete.services;
 
 import com.br.api.lanchonete.domain.product.Category;
 import com.br.api.lanchonete.domain.product.Product;
