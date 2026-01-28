@@ -2,6 +2,8 @@ package com.br.api.lanchonete.services;
 
 import com.br.api.lanchonete.domain.orders.*;
 import com.br.api.lanchonete.domain.product.Product;
+import com.br.api.lanchonete.domain.stock.MovementType;
+import com.br.api.lanchonete.domain.stock.StockMovementRequestDTO;
 import com.br.api.lanchonete.exceptions.InsufficientStockException;
 import com.br.api.lanchonete.exceptions.ProductNotFoundException;
 import com.br.api.lanchonete.repositories.OrderRepository;
@@ -25,6 +27,9 @@ public class OrderService {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private StockService stockService;
+
     @Transactional
     public OrderResponseDTO createOrder(OrderRequestDTO orderRequestDTO) {
         Order order = new Order();
@@ -40,11 +45,15 @@ public class OrderService {
         for(OrderItemRequestDTO itemDTO : orderRequestDTO.items()){
             Product product = productRepository.findById(itemDTO.productId()).orElseThrow(()-> new ProductNotFoundException(itemDTO.productId()));
 
-            if (product.getStock() < itemDTO.quantity()){
-                throw new InsufficientStockException(product.getName());
-            }
-            product.setStock(product.getStock() - itemDTO.quantity());
-
+            // Registra saída de estoque através do StockService
+            stockService.registerMovement(new StockMovementRequestDTO(
+                product.getId(),
+                MovementType.EXIT,
+                itemDTO.quantity(),
+                "Venda - Pedido #" + order.getOrderNumber() + " - Cliente: " + orderRequestDTO.clientName(),
+                "ORDER",
+                null  // Será atualizado com order.getId() após salvar
+            ));
 
             OrderItem item = new OrderItem();
             item.setOrder(order);
