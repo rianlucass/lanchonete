@@ -29,6 +29,9 @@ public class ProductService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private StockService stockService;
+
     private static final String UPLOAD_DIR = "uploads/";
 
     @Transactional
@@ -80,20 +83,11 @@ public class ProductService {
             }
 
             if (dto.category() != null) {
-                validateStockForBebidas(dto.category(), dto.stock());
                 product.setCategory(dto.category());
             }
 
             if (dto.description() != null) {
                 product.setDescription(dto.description());
-            }
-
-            if (dto.stock() != null) {
-                validateStockForBebidas(
-                        dto.category() != null ? dto.category() : product.getCategory(),
-                        dto.stock()
-                );
-                product.setStock(dto.stock());
             }
 
             Product updated = productRepository.save(product);
@@ -108,6 +102,7 @@ public class ProductService {
         try {
             Category categoryEnum = Category.valueOf(category.toUpperCase());
             return productRepository.findByCategoryAndActiveTrue(categoryEnum).stream().map(product -> {
+                Integer currentStock = stockService.calculateCurrentStock(product.getId());
                 ProductResponseDTO responseDTO = new ProductResponseDTO(
                         product.getId(),
                         product.getName(),
@@ -116,7 +111,7 @@ public class ProductService {
                         product.getDescription(),
                         product.getActive(),
                         product.getImageURL(),
-                        product.getStock()
+                        currentStock
                 );
                 return responseDTO;
             }).collect(Collectors.toList());
@@ -129,6 +124,7 @@ public class ProductService {
         return productRepository.findAll().stream()
                 .filter(product -> product.getActive()) // ← Filtra apenas ativos
                 .map(product -> {
+                    Integer currentStock = stockService.calculateCurrentStock(product.getId());
                     ProductResponseDTO productResponseDTO = new ProductResponseDTO(
                             product.getId(),
                             product.getName(),
@@ -137,7 +133,7 @@ public class ProductService {
                             product.getDescription(),
                             product.getActive(),
                             product.getImageURL(),
-                            product.getStock()
+                            currentStock
                     );
                     return productResponseDTO;
                 }).toList();
@@ -222,6 +218,7 @@ public class ProductService {
     }
 
     private ProductResponseDTO mapToResponse(Product p) {
+        Integer currentStock = stockService.calculateCurrentStock(p.getId());
         return new ProductResponseDTO(
                 p.getId(),
                 p.getName(),
@@ -230,7 +227,7 @@ public class ProductService {
                 p.getDescription(),
                 p.getActive(),
                 p.getImageURL(),
-                p.getStock()
+                currentStock
         );
     }
 }
